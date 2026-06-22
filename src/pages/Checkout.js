@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import PaymentModal from '../components/PaymentModal';
 
 export default function Checkout() {
   const { cart, totalPrice, clearCart, itemCount } = useCart();
-  const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', address: '' });
   const [showPayment, setShowPayment] = useState(false);
   const [placed, setPlaced] = useState(false);

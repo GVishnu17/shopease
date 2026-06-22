@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
@@ -54,7 +54,7 @@ export default function Login() {
           </div>
           {isLogin && (
             <p style={{ textAlign: 'right', fontSize: '13px' }}>
-              <a href="#" style={styles.link}>Forgot password?</a>
+              <span style={styles.link}>Forgot password?</span>
             </p>
           )}
           <button style={styles.btn} onClick={handleSubmit}>
