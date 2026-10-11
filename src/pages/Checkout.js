@@ -12,6 +12,8 @@ export default function Checkout() {
 
   const [form, setForm] = useState({ name: '', address: '', email: '' });
   const [coupon, setCoupon] = useState('');
+  const [couponError, setCouponError] = useState('');
+  const [couponApplied, setCouponApplied] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
 
   const handleChange = (e) => {
@@ -33,6 +35,26 @@ export default function Checkout() {
   }, [coupon, shipping, subtotal]);
 
   const finalTotal = Math.max(0, subtotal + shipping + tax - discount);
+
+  const applyCoupon = () => {
+    const normalized = coupon.trim().toUpperCase();
+    const validCoupons = ['SAVE10', 'WELCOME5', 'FREESHIP'];
+
+    if (!normalized) {
+      setCouponError('Please enter a coupon code.');
+      setCouponApplied(false);
+      return;
+    }
+
+    if (!validCoupons.includes(normalized)) {
+      setCouponError('Invalid coupon code. Try SAVE10, WELCOME5, or FREESHIP.');
+      setCouponApplied(false);
+      return;
+    }
+
+    setCouponError('');
+    setCouponApplied(true);
+  };
 
   const handlePlaceOrder = (e) => {
     e.preventDefault();
@@ -94,15 +116,27 @@ export default function Checkout() {
             <input type="text" name="address" value={form.address} onChange={handleChange} required />
           </label>
 
-          <label>
-            Coupon Code
-            <input
-              type="text"
-              value={coupon}
-              onChange={(e) => setCoupon(e.target.value)}
-              placeholder="SAVE10, WELCOME5, FREESHIP"
-            />
-          </label>
+          <div className="coupon-box">
+            <label>
+              Coupon Code
+              <input
+                type="text"
+                value={coupon}
+                onChange={(e) => {
+                  setCoupon(e.target.value);
+                  setCouponError('');
+                  setCouponApplied(false);
+                }}
+                placeholder="SAVE10, WELCOME5, FREESHIP"
+              />
+            </label>
+            <button type="button" className="btn btn--secondary coupon-btn" onClick={applyCoupon}>
+              Apply
+            </button>
+          </div>
+
+          {couponError && <p className="coupon-error">{couponError}</p>}
+          {couponApplied && <p className="coupon-success">Coupon applied successfully!</p>}
 
           <button type="submit" className="btn btn--primary btn--full">Proceed to Payment</button>
         </form>

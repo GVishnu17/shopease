@@ -454,6 +454,33 @@ select {
   font-size: 0.95rem;
 }
 
+.coupon-box {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+}
+
+.coupon-box label {
+  flex: 1;
+}
+
+.coupon-btn {
+  min-width: 110px;
+  height: 42px;
+}
+
+.coupon-error {
+  margin: -8px 0 0;
+  color: #dc2626;
+  font-size: 0.82rem;
+}
+
+.coupon-success {
+  margin: -8px 0 0;
+  color: #16a34a;
+  font-size: 0.82rem;
+}
+
 .checkout__summary {
   background: #fff;
   border: 1px solid var(--line);
@@ -477,6 +504,11 @@ select {
 @media (max-width: 640px) {
   .checkout__grid {
     grid-template-columns: 1fr;
+  }
+
+  .coupon-box {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 
