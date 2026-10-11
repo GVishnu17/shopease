@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import PaymentModal from '../components/PaymentModal';
 
 const FREE_SHIPPING_MIN = 50;
 const SHIPPING_FEE = 5;
