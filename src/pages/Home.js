@@ -3,9 +3,13 @@ import products from '../data/products.json';
 import ProductCard from '../components/ProductCard';
 import Filters from '../components/Filters';
 
+const MAX_PRICE = Math.ceil(Math.max(...products.map((product) => product.price)));
+
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('featured');
+  const [maxPrice, setMaxPrice] = useState(MAX_PRICE);
 
   const categories = useMemo(
     () => [...new Set(products.map((p) => p.category))],
@@ -13,12 +17,24 @@ export default function Home() {
   );
 
   const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      const matchesCategory = activeCategory === 'All' || p.category === activeCategory;
-      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesCategory && matchesSearch;
+    const result = products.filter((product) => {
+      const matchesCategory = activeCategory === 'All' || product.category === activeCategory;
+      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesPrice = product.price <= maxPrice;
+      return matchesCategory && matchesSearch && matchesPrice;
     });
-  }, [activeCategory, searchTerm]);
+
+    switch (sortBy) {
+      case 'price-low':
+        return [...result].sort((a, b) => a.price - b.price);
+      case 'price-high':
+        return [...result].sort((a, b) => b.price - a.price);
+      case 'rating':
+        return [...result].sort((a, b) => b.rating - a.rating);
+      default:
+        return result;
+    }
+  }, [activeCategory, maxPrice, searchTerm, sortBy]);
 
   return (
     <main className="home">
@@ -33,6 +49,11 @@ export default function Home() {
         onCategoryChange={setActiveCategory}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
+        sortBy={sortBy}
+        onSortChange={setSortBy}
+        maxPrice={maxPrice}
+        onMaxPriceChange={setMaxPrice}
+        maxPriceLimit={MAX_PRICE}
       />
 
       <div className="product-grid">

@@ -1,17 +1,38 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import PaymentModal from '../components/PaymentModal';
+
+const FREE_SHIPPING_MIN = 50;
+const SHIPPING_FEE = 5;
+const TAX_RATE = 0.08;
 
 export default function Checkout() {
   const { cart, totalPrice, clearCart, itemCount } = useCart();
-  const [form, setForm] = useState({ name: '', address: '' });
+  const navigate = useNavigate();
+
+  const [form, setForm] = useState({ name: '', address: '', email: '' });
+  const [coupon, setCoupon] = useState('');
   const [showPayment, setShowPayment] = useState(false);
-  const [placed, setPlaced] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
+
+  const subtotal = totalPrice;
+  const shipping = subtotal >= FREE_SHIPPING_MIN ? 0 : SHIPPING_FEE;
+  const tax = subtotal * TAX_RATE;
+
+  const discount = useMemo(() => {
+    const normalized = coupon.trim().toUpperCase();
+
+    if (!normalized) return 0;
+    if (normalized === 'SAVE10') return subtotal * 0.1;
+    if (normalized === 'WELCOME5') return subtotal * 0.05;
+    if (normalized === 'FREESHIP') return shipping;
+    return 0;
+  }, [coupon, shipping, subtotal]);
+
+  const finalTotal = Math.max(0, subtotal + shipping + tax - discount);
 
   const handlePlaceOrder = (e) => {
     e.preventDefault();
@@ -19,26 +40,38 @@ export default function Checkout() {
   };
 
   const handlePaymentSuccess = () => {
-    setShowPayment(false);
-    setPlaced(true);
+    const orderId = `SE-${Date.now().toString().slice(-6)}`;
+    const order = {
+      id: orderId,
+      customer: form.name || 'Guest',
+      email: form.email,
+      address: form.address,
+      items: cart,
+      subtotal,
+      shipping: shipping === 0 ? 0 : shipping,
+      tax,
+      discount,
+      total: finalTotal,
+      status: 'Confirmed',
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      const existingOrders = JSON.parse(localStorage.getItem('shopease_orders') || '[]');
+      localStorage.setItem('shopease_orders', JSON.stringify([...existingOrders, order]));
+    } catch {
+      // ignore storage failures
+    }
+
     clearCart();
+    navigate(`/orders/${orderId}`);
   };
 
-  if (itemCount === 0 && !placed) {
+  if (itemCount === 0) {
     return (
       <main className="checkout">
         <p>Your cart is empty.</p>
-        <Link to="/" className="btn btn--primary">Back to Shop</Link>
-      </main>
-    );
-  }
-
-  if (placed) {
-    return (
-      <main className="checkout checkout--confirmed">
-        <h1>Order Placed!</h1>
-        <p>Thanks, {form.name || "there"}! Your order has been received.</p>
-        <Link to="/" className="btn btn--primary">Continue Shopping</Link>
+        <button className="btn btn--primary" onClick={() => navigate('/')}>Back to Shop</button>
       </main>
     );
   }
@@ -53,11 +86,27 @@ export default function Checkout() {
             <input type="text" name="name" value={form.name} onChange={handleChange} required />
           </label>
           <label>
+            Email
+            <input type="email" name="email" value={form.email} onChange={handleChange} required />
+          </label>
+          <label>
             Shipping Address
             <input type="text" name="address" value={form.address} onChange={handleChange} required />
           </label>
+
+          <label>
+            Coupon Code
+            <input
+              type="text"
+              value={coupon}
+              onChange={(e) => setCoupon(e.target.value)}
+              placeholder="SAVE10, WELCOME5, FREESHIP"
+            />
+          </label>
+
           <button type="submit" className="btn btn--primary btn--full">Proceed to Payment</button>
         </form>
+
         <div className="checkout__summary">
           <h3>Order Summary</h3>
           {cart.map((item) => (
@@ -66,15 +115,32 @@ export default function Checkout() {
               <span>${(item.price * item.quantity).toFixed(2)}</span>
             </div>
           ))}
+          <div className="checkout__line">
+            <span>Subtotal</span>
+            <span>${subtotal.toFixed(2)}</span>
+          </div>
+          <div className="checkout__line">
+            <span>Shipping</span>
+            <span>{shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}</span>
+          </div>
+          <div className="checkout__line">
+            <span>Tax</span>
+            <span>${tax.toFixed(2)}</span>
+          </div>
+          <div className="checkout__line">
+            <span>Discount</span>
+            <span>-${discount.toFixed(2)}</span>
+          </div>
           <div className="checkout__line checkout__line--total">
             <span>Total</span>
-            <span>${totalPrice.toFixed(2)}</span>
+            <span>${finalTotal.toFixed(2)}</span>
           </div>
         </div>
       </div>
+
       {showPayment && (
         <PaymentModal
-          total={totalPrice.toFixed(2)}
+          total={finalTotal.toFixed(2)}
           onClose={() => setShowPayment(false)}
           onSuccess={handlePaymentSuccess}
         />

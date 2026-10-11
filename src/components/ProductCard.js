@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 
 function StarRating({ rating }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-      {[1, 2, 3, 4, 5].map(star => (
+      {[1, 2, 3, 4, 5].map((star) => (
         <span key={star} style={{ fontSize: '14px', color: star <= Math.round(rating) ? '#f59e0b' : '#ddd' }}>★</span>
       ))}
       <span style={{ fontSize: '12px', color: '#888', marginLeft: '2px' }}>{rating}</span>
@@ -16,7 +17,7 @@ function StarRating({ rating }) {
 function QuickViewModal({ product, onClose, onAdd }) {
   return (
     <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.modal} onClick={e => e.stopPropagation()}>
+      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
         <button style={styles.close} onClick={onClose}>✕</button>
         <div style={styles.modalGrid}>
           <img src={product.image} alt={product.name} style={styles.modalImg} />
@@ -44,8 +45,10 @@ function QuickViewModal({ product, onClose, onAdd }) {
 
 export default function ProductCard({ product }) {
   const { addToCart } = useCart();
+  const { toggleWishlist, isInWishlist } = useWishlist();
   const [showModal, setShowModal] = useState(false);
   const [added, setAdded] = useState(false);
+  const isFavorite = isInWishlist(product.id);
 
   const handleAdd = () => {
     addToCart(product);
@@ -56,9 +59,27 @@ export default function ProductCard({ product }) {
   return (
     <>
       <div className="product-card">
-        <Link to={"/product/" + product.id} className="product-card__image-link">
-          <img src={product.image} alt={product.name} className="product-card__image" />
-        </Link>
+        <div style={{ position: 'relative' }}>
+          <Link to={"/product/" + product.id} className="product-card__image-link">
+            <img src={product.image} alt={product.name} className="product-card__image" />
+          </Link>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              toggleWishlist(product);
+            }}
+            style={{
+              ...styles.wishlistBtn,
+              background: isFavorite ? '#f43f5e' : '#fff',
+              color: isFavorite ? '#fff' : '#4f46e5',
+              border: isFavorite ? '1px solid #f43f5e' : '1px solid #dbe2f0',
+            }}
+            aria-label={isFavorite ? 'Remove from wishlist' : 'Add to wishlist'}
+          >
+            {isFavorite ? '♥' : '♡'}
+          </button>
+        </div>
         <div className="product-card__body">
           <span className="product-card__category">{product.category}</span>
           <h3 className="product-card__name">{product.name}</h3>
@@ -111,4 +132,19 @@ const styles = {
   modalPrice: { fontSize: '24px', fontWeight: '700', color: '#4f46e5', margin: 0 },
   addBtn: { padding: '12px 20px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
   viewBtn: { padding: '12px 20px', border: '1.5px solid #4f46e5', borderRadius: '8px', color: '#4f46e5', textDecoration: 'none', fontSize: '14px', fontWeight: '600', display: 'flex', alignItems: 'center' },
+  wishlistBtn: {
+    position: 'absolute',
+    top: '12px',
+    right: '12px',
+    width: '38px',
+    height: '38px',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    fontSize: '18px',
+    boxShadow: '0 6px 16px rgba(79, 70, 229, 0.18)',
+    zIndex: 1,
+  },
 };

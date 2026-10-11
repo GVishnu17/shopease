@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 
 function Logo() {
   return (
@@ -23,12 +24,17 @@ function Logo() {
 
 export default function Navbar() {
   const { itemCount } = useCart();
+  const { wishlistCount } = useWishlist();
 
   return (
     <nav className="navbar">
       <div className="navbar__inner">
         <Logo />
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <Link to="/wishlist" title="Wishlist" style={{ ...styles.icon, position: 'relative' }}>
+            💖
+            {wishlistCount > 0 && <span className="navbar__cart-badge">{wishlistCount}</span>}
+          </Link>
           <Link to="/contact" title="Contact Us" style={styles.icon}>📞</Link>
           <Link to="/login" title="Login / Sign Up" style={styles.icon}>👤</Link>
           <Link to="/cart" title="Cart" style={{ ...styles.icon, position: 'relative' }}>

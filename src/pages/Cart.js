@@ -1,15 +1,30 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import CartItem from '../components/CartItem';
 
-const FREE_SHIPPING_MIN = 50; // free shipping above this amount
-const SHIPPING_FEE = 5;       // shipping charge below that amount
-const TAX_RATE = 0.08;        // 8% tax
+const FREE_SHIPPING_MIN = 50;
+const SHIPPING_FEE = 5;
+const TAX_RATE = 0.08;
 
 export default function Cart() {
   const { cart, totalPrice, itemCount } = useCart();
   const navigate = useNavigate();
+
+  const shipping = totalPrice >= FREE_SHIPPING_MIN ? 0 : SHIPPING_FEE;
+  const tax = totalPrice * TAX_RATE;
+  const subtotal = totalPrice;
+  const grandTotal = subtotal + shipping + tax;
+
+  const progress = Math.min((subtotal / FREE_SHIPPING_MIN) * 100, 100);
+  const remaining = Math.max(FREE_SHIPPING_MIN - subtotal, 0);
+
+  const summaryRows = useMemo(() => [
+    { label: 'Subtotal', value: `$${subtotal.toFixed(2)}` },
+    { label: 'Shipping', value: shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}` },
+    { label: 'Tax (8%)', value: `$${tax.toFixed(2)}` },
+    { label: 'Total', value: `$${grandTotal.toFixed(2)}`, highlight: true },
+  ], [subtotal, shipping, tax, grandTotal]);
 
   if (itemCount === 0) {
     return (
@@ -17,16 +32,10 @@ export default function Cart() {
         <div className="cart__empty-icon">🛒</div>
         <h1>Your cart is empty</h1>
         <p>Looks like you haven't added anything yet.</p>
-        <Link to="/" className="btn btn--primary">Start Shopping</Link>
+        <button className="btn btn--primary" onClick={() => navigate('/')}>Start Shopping</button>
       </main>
     );
   }
-
-  const shipping = totalPrice >= FREE_SHIPPING_MIN ? 0 : SHIPPING_FEE;
-  const tax = totalPrice * TAX_RATE;
-  const grandTotal = totalPrice + shipping + tax;
-  const remaining = FREE_SHIPPING_MIN - totalPrice;
-  const progress = Math.min((totalPrice / FREE_SHIPPING_MIN) * 100, 100);
 
   return (
     <main className="cart">
@@ -50,28 +59,20 @@ export default function Cart() {
       </div>
 
       <div className="cart__summary">
-        <div className="cart__row">
-          <span>Subtotal</span>
-          <span>${totalPrice.toFixed(2)}</span>
-        </div>
-        <div className="cart__row">
-          <span>Shipping</span>
-          <span>{shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}</span>
-        </div>
-        <div className="cart__row">
-          <span>Tax (8%)</span>
-          <span>${tax.toFixed(2)}</span>
-        </div>
-        <div className="cart__row cart__total">
-          <span>Total</span>
-          <span>${grandTotal.toFixed(2)}</span>
-        </div>
+        {summaryRows.map((row) => (
+          <div key={row.label} className={`cart__row ${row.highlight ? 'cart__total' : ''}`}>
+            <span>{row.label}</span>
+            <span>{row.value}</span>
+          </div>
+        ))}
       </div>
 
       <button className="btn btn--primary btn--full" onClick={() => navigate('/checkout')}>
         Proceed to Checkout
       </button>
-      <Link to="/" className="cart__continue">← Continue Shopping</Link>
+      <button className="cart__continue" onClick={() => navigate('/')}>
+        ← Continue Shopping
+      </button>
     </main>
   );
 }
