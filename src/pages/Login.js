@@ -1,96 +1,81 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
-  const [isLogin, setIsLogin] = useState(true);
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
-  const [errors, setErrors] = useState({});
-  const [success, setSuccess] = useState(false);
-  const navigate = useNavigate();
+  const { user, login } = useAuth();
+  const location = useLocation();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const validate = () => {
-    const e = {};
-    if (!isLogin && !form.name.trim()) e.name = 'Name is required';
-    if (!form.email.includes('@')) e.email = 'Enter a valid email';
-    if (form.password.length < 6) e.password = 'Password must be at least 6 characters';
-    return e;
-  };
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
 
-  const handleSubmit = () => {
-    const e = validate();
-    if (Object.keys(e).length > 0) { setErrors(e); return; }
-    setSuccess(true);
-    setTimeout(() => navigate('/'), 1500);
+  const justRegistered = location.state && location.state.registered;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!email.trim() || !password) {
+      setError('Please enter your email and password.');
+      return;
+    }
+
+    setLoading(true);
+    const result = await login(email, password);
+    if (!result.ok) {
+      setError(result.error);
+      setLoading(false);
+    }
   };
 
   return (
     <main style={styles.page}>
       <div style={styles.card}>
-        <h1 style={styles.title}>{isLogin ? 'Welcome Back!' : 'Create Account'}</h1>
-        <p style={styles.subtitle}>{isLogin ? 'Login to your ShopEase account' : 'Join ShopEase today'}</p>
+        <h1 style={styles.title}>Welcome back</h1>
+        <p style={styles.subtitle}>Log in to continue to ShopEase</p>
 
-        {success && <div style={styles.successMsg}>Success! Redirecting...</div>}
+        {justRegistered && !error && (
+          <p style={styles.success}>Registration successful! Please log in.</p>
+        )}
+        {error && <p style={styles.error}>{error}</p>}
 
-        <div style={styles.form}>
-          {!isLogin && (
-            <div style={styles.field}>
-              <label style={styles.label}>Full Name</label>
-              <input style={styles.input} placeholder="John Doe"
-                value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-              {errors.name && <span style={styles.error}>{errors.name}</span>}
-            </div>
-          )}
-          <div style={styles.field}>
-            <label style={styles.label}>Email</label>
-            <input style={styles.input} type="email" placeholder="you@example.com"
-              value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-            {errors.email && <span style={styles.error}>{errors.email}</span>}
-          </div>
-          <div style={styles.field}>
-            <label style={styles.label}>Password</label>
-            <input style={styles.input} type="password" placeholder="••••••••"
-              value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
-            {errors.password && <span style={styles.error}>{errors.password}</span>}
-          </div>
-          {isLogin && (
-            <p style={{ textAlign: 'right', fontSize: '13px' }}>
-              <span style={styles.link}>Forgot password?</span>
-            </p>
-          )}
-          <button style={styles.btn} onClick={handleSubmit}>
-            {isLogin ? 'Login' : 'Create Account'}
+        <form onSubmit={handleSubmit} style={styles.form}>
+          <label style={styles.label}>
+            Email
+            <input style={styles.input} type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </label>
+          <label style={styles.label}>
+            Password
+            <input style={styles.input} type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </label>
+          <button type="submit" style={styles.primaryBtn} disabled={loading}>
+            {loading ? 'Logging in...' : 'Login'}
           </button>
-          <div style={styles.divider}><span>or</span></div>
-          <button style={styles.googleBtn}>
-            <span style={{ fontSize: '18px' }}>G</span> Continue with Google
-          </button>
-        </div>
+        </form>
 
-        <p style={styles.switchText}>
-          {isLogin ? "Don't have an account? " : 'Already have an account? '}
-          <span style={styles.link} onClick={() => { setIsLogin(!isLogin); setErrors({}); }}>
-            {isLogin ? 'Sign Up' : 'Login'}
-          </span>
-        </p>
+        <div style={styles.divider}>New to ShopEase?</div>
+        <Link to="/register" style={styles.registerBtn}>Register</Link>
       </div>
     </main>
   );
 }
 
 const styles = {
-  page: { minHeight: '80vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' },
-  card: { background: '#fff', borderRadius: '20px', padding: '48px 40px', width: '100%', maxWidth: '420px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' },
-  title: { fontSize: '28px', fontWeight: '700', color: '#1a1a2e', margin: '0 0 6px' },
-  subtitle: { color: '#888', fontSize: '14px', margin: '0 0 28px' },
-  form: { display: 'flex', flexDirection: 'column', gap: '16px' },
-  field: { display: 'flex', flexDirection: 'column', gap: '4px' },
-  label: { fontSize: '13px', fontWeight: '600', color: '#444' },
-  input: { padding: '12px 14px', border: '1.5px solid #e0e0e0', borderRadius: '10px', fontSize: '14px', outline: 'none' },
-  error: { color: '#e53e3e', fontSize: '12px' },
-  btn: { padding: '14px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: '700', cursor: 'pointer' },
-  googleBtn: { padding: '12px', background: '#fff', color: '#333', border: '1.5px solid #e0e0e0', borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' },
-  divider: { textAlign: 'center', color: '#aaa', fontSize: '13px', position: 'relative' },
-  link: { color: '#4f46e5', cursor: 'pointer', fontWeight: '600' },
-  switchText: { textAlign: 'center', fontSize: '14px', color: '#666', marginTop: '20px' },
-  successMsg: { background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px', color: '#166534', fontSize: '14px', marginBottom: '16px', textAlign: 'center' },
+  page: { minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' },
+  card: { background: '#fff', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '420px', boxShadow: '0 10px 40px rgba(79,70,229,0.15)' },
+  title: { margin: '0 0 4px', fontSize: '26px', color: '#1a1a2e' },
+  subtitle: { margin: '0 0 20px', color: '#777', fontSize: '14px' },
+  form: { display: 'flex', flexDirection: 'column', gap: '14px' },
+  label: { display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '14px', fontWeight: '600', color: '#333' },
+  input: { padding: '10px 12px', border: '1.5px solid #dbe2f0', borderRadius: '8px', fontSize: '14px' },
+  primaryBtn: { padding: '12px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' },
+  error: { background: '#fef2f2', color: '#b91c1c', padding: '10px 12px', borderRadius: '8px', fontSize: '14px', margin: '0 0 12px' },
+  success: { background: '#f0fdf4', color: '#15803d', padding: '10px 12px', borderRadius: '8px', fontSize: '14px', margin: '0 0 12px' },
+  divider: { textAlign: 'center', margin: '20px 0 10px', fontSize: '14px', color: '#888' },
+  registerBtn: { display: 'block', textAlign: 'center', padding: '12px', border: '1.5px solid #4f46e5', borderRadius: '8px', color: '#4f46e5', fontWeight: '600', textDecoration: 'none', fontSize: '15px' },
 };
