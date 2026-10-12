@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
+import React, { createContext, useContext, useMemo, useState, useEffect, useCallback } from 'react';
 
 const WishlistContext = createContext(null);
 const STORAGE_KEY = 'shopease_wishlist';
@@ -19,7 +19,7 @@ export function WishlistProvider({ children }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(wishlist));
   }, [wishlist]);
 
-  const toggleWishlist = (product) => {
+  const toggleWishlist = useCallback((product) => {
     setWishlist((current) => {
       const exists = current.some((item) => item.id === product.id);
       if (exists) {
@@ -27,13 +27,16 @@ export function WishlistProvider({ children }) {
       }
       return [...current, product];
     });
-  };
+  }, []);
 
-  const removeFromWishlist = (productId) => {
+  const removeFromWishlist = useCallback((productId) => {
     setWishlist((current) => current.filter((item) => item.id !== productId));
-  };
+  }, []);
 
-  const isInWishlist = (productId) => wishlist.some((item) => item.id === productId);
+  const isInWishlist = useCallback(
+    (productId) => wishlist.some((item) => item.id === productId),
+    [wishlist]
+  );
 
   const value = useMemo(() => ({
     wishlist,
@@ -41,7 +44,7 @@ export function WishlistProvider({ children }) {
     toggleWishlist,
     removeFromWishlist,
     isInWishlist,
-  }), [wishlist]);
+  }), [wishlist, toggleWishlist, removeFromWishlist, isInWishlist]);
 
   return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>;
 }
