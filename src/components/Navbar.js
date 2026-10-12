@@ -1,7 +1,8 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { useAuth } from '../context/AuthContext';
 
 function Logo() {
   return (
@@ -25,6 +26,15 @@ function Logo() {
 export default function Navbar() {
   const { itemCount } = useCart();
   const { wishlistCount } = useWishlist();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const firstName = user && user.name ? user.name.split(' ')[0] : '';
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <nav className="navbar">
@@ -36,11 +46,12 @@ export default function Navbar() {
             {wishlistCount > 0 && <span className="navbar__cart-badge">{wishlistCount}</span>}
           </Link>
           <Link to="/contact" title="Contact Us" style={styles.icon}>📞</Link>
-          <Link to="/login" title="Login / Sign Up" style={styles.icon}>👤</Link>
           <Link to="/cart" title="Cart" style={{ ...styles.icon, position: 'relative' }}>
             🛒
             {itemCount > 0 && <span className="navbar__cart-badge">{itemCount}</span>}
           </Link>
+          <span style={styles.hello}>Hi, {firstName}</span>
+          <button type="button" onClick={handleLogout} style={styles.logout}>Logout</button>
         </div>
       </div>
     </nav>
@@ -49,4 +60,6 @@ export default function Navbar() {
 
 const styles = {
   icon: { fontSize: '22px', textDecoration: 'none' },
+  hello: { fontSize: '14px', fontWeight: '600', color: '#4f46e5' },
+  logout: { padding: '6px 12px', border: '1.5px solid #4f46e5', borderRadius: '8px', background: '#fff', color: '#4f46e5', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
 };
