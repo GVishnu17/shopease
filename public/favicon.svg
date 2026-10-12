@@ -1,9 +1,14 @@
-<svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="36" height="36" rx="10" fill="#4f46e5"/>
-  <path d="M8 12h3l2 10h10l2-10h3" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="14" cy="25" r="1.5" fill="#fff"/>
-  <circle cx="22" cy="25" r="1.5" fill="#fff"/>
-  <path d="M11 15h14" stroke="#a78bfa" stroke-width="1.5" stroke-linecap="round"/>
-  <path d="M12 18h12" stroke="#a78bfa" stroke-width="1.5" stroke-linecap="round"/>
-  <path d="M13 21h10" stroke="#a78bfa" stroke-width="1.5" stroke-linecap="round"/>
-</svg>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="%PUBLIC_URL%/favicon.svg" />
+    <title>ShopEase - Online Shopping for Electronics, Clothing, Books and Home</title>
+    <meta name="description" content="ShopEase is an online shop for electronics, clothing, books and home items. Browse products, save favourites and order easily." />
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>
