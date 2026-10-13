@@ -26,7 +26,11 @@ function ProtectedRoute({ children }) {
 }
 
 function AppLayout() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <p style={{ textAlign: 'center', marginTop: '80px' }}>Loading...</p>;
+  }
 
   return (
     <>
