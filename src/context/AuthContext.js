@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut,
   updateProfile,
   onAuthStateChanged,
@@ -24,6 +25,7 @@ function friendlyError(error) {
     case 'auth/email-already-in-use':
       return 'An account with this email already exists. Please log in.';
     case 'auth/invalid-email':
+    case 'auth/missing-email':
       return 'Please enter a valid email address.';
     case 'auth/weak-password':
       return 'Password must be at least 6 characters.';
@@ -82,6 +84,15 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const resetPassword = useCallback(async (email) => {
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: friendlyError(error) };
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await signOut(auth);
@@ -91,8 +102,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, register, login, logout }),
-    [user, loading, register, login, logout]
+    () => ({ user, loading, register, login, resetPassword, logout }),
+    [user, loading, register, login, resetPassword, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
