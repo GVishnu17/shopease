@@ -1,11 +1,14 @@
-import React, { createContext, useContext, useMemo, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '../firebase';
+import { useAuth } from './AuthContext';
 
 const WishlistContext = createContext(null);
-const STORAGE_KEY = 'shopease_wishlist';
+const LEGACY_KEY = 'shopease_wishlist';
 
-function getInitialWishlist() {
+function getLegacyWishlist() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = localStorage.getItem(LEGACY_KEY);
     return saved ? JSON.parse(saved) : [];
   } catch {
     return [];
@@ -13,11 +16,60 @@ function getInitialWishlist() {
 }
 
 export function WishlistProvider({ children }) {
-  const [wishlist, setWishlist] = useState(getInitialWishlist);
+  const { user } = useAuth();
+  const uid = user ? user.uid : null;
+  const [wishlist, setWishlist] = useState([]);
+  const [ready, setReady] = useState(false);
+  const skipSave = useRef(false);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(wishlist));
-  }, [wishlist]);
+    let cancelled = false;
+    setReady(false);
+    setWishlist([]);
+
+    async function load() {
+      const legacy = getLegacyWishlist();
+      let items = [];
+      let exists = false;
+      try {
+        const snap = await getDoc(doc(db, 'users', uid, 'data', 'wishlist'));
+        if (snap.exists()) {
+          exists = true;
+          items = snap.data().items || [];
+        } else if (legacy.length > 0) {
+          items = legacy;
+          try {
+            localStorage.removeItem(LEGACY_KEY);
+          } catch {
+            // ignore
+          }
+        }
+      } catch {
+        if (!cancelled) setWishlist(legacy);
+        return;
+      }
+      if (cancelled) return;
+      skipSave.current = exists || items.length === 0;
+      setWishlist(items);
+      setReady(true);
+    }
+
+    if (uid) {
+      load();
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [uid]);
+
+  useEffect(() => {
+    if (!uid || !ready) return;
+    if (skipSave.current) {
+      skipSave.current = false;
+      return;
+    }
+    setDoc(doc(db, 'users', uid, 'data', 'wishlist'), { items: wishlist }).catch(() => {});
+  }, [wishlist, uid, ready]);
 
   const toggleWishlist = useCallback((product) => {
     setWishlist((current) => {
