@@ -1,89 +1,99 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  updateProfile,
+  onAuthStateChanged,
+} from 'firebase/auth';
+import { auth } from '../firebase';
 
 const AuthContext = createContext(null);
-const USERS_KEY = 'shopease_users';
-const SESSION_KEY = 'shopease_session';
 
-async function hashPassword(password) {
-  const data = new TextEncoder().encode(password);
-  const buffer = await window.crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(buffer))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
+function toUser(fbUser) {
+  if (!fbUser) return null;
+  return {
+    uid: fbUser.uid,
+    email: fbUser.email,
+    name: fbUser.displayName || (fbUser.email ? fbUser.email.split('@')[0] : ''),
+  };
 }
 
-function readUsers() {
-  try {
-    return JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-  } catch {
-    return [];
-  }
-}
-
-function getSession() {
-  try {
-    return JSON.parse(localStorage.getItem(SESSION_KEY));
-  } catch {
-    return null;
+function friendlyError(error) {
+  switch (error && error.code) {
+    case 'auth/email-already-in-use':
+      return 'An account with this email already exists. Please log in.';
+    case 'auth/invalid-email':
+      return 'Please enter a valid email address.';
+    case 'auth/weak-password':
+      return 'Password must be at least 6 characters.';
+    case 'auth/invalid-credential':
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+      return 'Incorrect email or password. If you are new, please register first.';
+    case 'auth/too-many-requests':
+      return 'Too many attempts. Please wait a few minutes and try again.';
+    case 'auth/network-request-failed':
+      return 'Network problem. Please check your internet and try again.';
+    default:
+      return 'Something went wrong. Please try again.';
   }
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(getSession);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const registering = useRef(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+      if (registering.current) return;
+      setUser(toUser(fbUser));
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
 
   const register = useCallback(async ({ name, email, password }) => {
-    const users = readUsers();
-    const normalizedEmail = email.trim().toLowerCase();
-
-    if (users.some((u) => u.email === normalizedEmail)) {
-      return { ok: false, error: 'An account with this email already exists. Please log in.' };
-    }
-
-    const passwordHash = await hashPassword(password);
-    const newUser = { name: name.trim(), email: normalizedEmail, passwordHash };
-
+    registering.current = true;
     try {
-      localStorage.setItem(USERS_KEY, JSON.stringify([...users, newUser]));
-    } catch {
-      return { ok: false, error: 'Could not save your account. Please try again.' };
+      const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+      await updateProfile(cred.user, { displayName: name.trim() });
+      await signOut(auth);
+      return { ok: true };
+    } catch (error) {
+      try {
+        await signOut(auth);
+      } catch {
+        // ignore
+      }
+      return { ok: false, error: friendlyError(error) };
+    } finally {
+      registering.current = false;
     }
-    return { ok: true };
   }, []);
 
   const login = useCallback(async (email, password) => {
-    const users = readUsers();
-    const normalizedEmail = email.trim().toLowerCase();
-    const found = users.find((u) => u.email === normalizedEmail);
-
-    if (!found) {
-      return { ok: false, error: 'No account found with this email. Please register first.' };
-    }
-
-    const passwordHash = await hashPassword(password);
-    if (found.passwordHash !== passwordHash) {
-      return { ok: false, error: 'Incorrect password. Please try again.' };
-    }
-
-    const session = { name: found.name, email: found.email };
     try {
-      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    } catch {
-      // ignore storage failures
+      await signInWithEmailAndPassword(auth, email.trim(), password);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: friendlyError(error) };
     }
-    setUser(session);
-    return { ok: true };
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     try {
-      localStorage.removeItem(SESSION_KEY);
+      await signOut(auth);
     } catch {
-      // ignore storage failures
+      // ignore
     }
-    setUser(null);
   }, []);
 
-  const value = useMemo(() => ({ user, register, login, logout }), [user, register, login, logout]);
+  const value = useMemo(
+    () => ({ user, loading, register, login, logout }),
+    [user, loading, register, login, logout]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
