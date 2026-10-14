@@ -50,7 +50,7 @@ export default function Navbar() {
             🛒
             {itemCount > 0 && <span className="navbar__cart-badge">{itemCount}</span>}
           </Link>
-          <span style={styles.hello}>Hi, {firstName}</span>
+          <Link to="/profile" title="My Profile" style={styles.hello}>Hi, {firstName}</Link>
           <button type="button" onClick={handleLogout} style={styles.logout}>Logout</button>
         </div>
       </div>
@@ -60,6 +60,6 @@ export default function Navbar() {
 
 const styles = {
   icon: { fontSize: '22px', textDecoration: 'none' },
-  hello: { fontSize: '14px', fontWeight: '600', color: '#4f46e5' },
+  hello: { fontSize: '14px', fontWeight: '600', color: '#4f46e5', textDecoration: 'none' },
   logout: { padding: '6px 12px', border: '1.5px solid #4f46e5', borderRadius: '8px', background: '#fff', color: '#4f46e5', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
 };
