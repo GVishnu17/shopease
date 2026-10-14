@@ -1,6 +1,9 @@
-import React, { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import PaymentModal from '../components/PaymentModal';
 
 const FREE_SHIPPING_MIN = 50;
@@ -9,13 +12,44 @@ const TAX_RATE = 0.08;
 
 export default function Checkout() {
   const { cart, totalPrice, clearCart, itemCount } = useCart();
+  const { user } = useAuth();
   const navigate = useNavigate();
+
+  const uid = user ? user.uid : null;
+  const userName = user ? user.name : '';
+  const userEmail = user ? user.email : '';
 
   const [form, setForm] = useState({ name: '', address: '', email: '' });
   const [coupon, setCoupon] = useState('');
   const [couponError, setCouponError] = useState('');
   const [couponApplied, setCouponApplied] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProfile() {
+      let saved = {};
+      try {
+        const snap = await getDoc(doc(db, 'users', uid, 'data', 'profile'));
+        if (snap.exists()) saved = snap.data();
+      } catch {
+        // ignore: the form simply stays as the user types it
+      }
+      if (cancelled) return;
+      const address = [saved.address, saved.city, saved.state, saved.pin].filter(Boolean).join(', ');
+      setForm((current) => ({
+        name: current.name || userName,
+        email: current.email || userEmail,
+        address: current.address || address,
+      }));
+    }
+
+    if (uid) loadProfile();
+    return () => {
+      cancelled = true;
+    };
+  }, [uid, userName, userEmail]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -104,6 +138,9 @@ export default function Checkout() {
       <h1>Checkout</h1>
       <div className="checkout__grid">
         <form className="checkout__form" onSubmit={handlePlaceOrder}>
+          <p style={{ fontSize: '13px', color: '#777', margin: 0 }}>
+            Your name, email and saved address are filled in from your <Link to="/profile">profile</Link>.
+          </p>
           <label>
             Full Name
             <input type="text" name="name" value={form.name} onChange={handleChange} required />
