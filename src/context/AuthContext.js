@@ -93,6 +93,19 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const updateName = useCallback(async (name) => {
+    try {
+      if (!auth.currentUser) {
+        return { ok: false, error: 'Please log in again.' };
+      }
+      await updateProfile(auth.currentUser, { displayName: name.trim() });
+      setUser(toUser(auth.currentUser));
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: friendlyError(error) };
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await signOut(auth);
@@ -102,8 +115,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, register, login, resetPassword, logout }),
-    [user, loading, register, login, resetPassword, logout]
+    () => ({ user, loading, register, login, resetPassword, updateName, logout }),
+    [user, loading, register, login, resetPassword, updateName, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
