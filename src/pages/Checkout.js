@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -118,6 +118,20 @@ export default function Checkout() {
       localStorage.setItem('shopease_orders', JSON.stringify([...existingOrders, order]));
     } catch {
       // ignore storage failures
+    }
+
+    if (uid) {
+      const cloudOrder = {
+        ...order,
+        items: cart.map((item) => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image || '',
+        })),
+      };
+      setDoc(doc(db, 'users', uid, 'orders', orderId), cloudOrder).catch(() => {});
     }
 
     clearCart();
