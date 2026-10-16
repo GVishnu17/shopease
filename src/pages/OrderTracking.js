@@ -1,21 +1,62 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
+import { useAuth } from '../context/AuthContext';
 
 const STATUS_FLOW = ['Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'];
 
+function findLocalOrder(orderId) {
+  try {
+    const saved = JSON.parse(localStorage.getItem('shopease_orders') || '[]');
+    return saved.find((item) => item.id === orderId) || null;
+  } catch {
+    return null;
+  }
+}
+
 export default function OrderTracking() {
   const { orderId } = useParams();
+  const { user } = useAuth();
+  const uid = user ? user.uid : null;
   const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('shopease_orders') || '[]');
-      const found = saved.find((item) => item.id === orderId);
-      setOrder(found || null);
-    } catch {
-      setOrder(null);
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      let found = null;
+
+      if (uid) {
+        try {
+          const snap = await getDoc(doc(db, 'users', uid, 'orders', orderId));
+          if (snap.exists()) found = snap.data();
+        } catch {
+          // fall back to the copy saved on this device
+        }
+      }
+
+      if (!found) found = findLocalOrder(orderId);
+      if (cancelled) return;
+      setOrder(found);
+      setLoading(false);
     }
-  }, [orderId]);
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [orderId, uid]);
+
+  if (loading) {
+    return (
+      <main className="tracking-page">
+        <p>Loading your order...</p>
+      </main>
+    );
+  }
 
   if (!order) {
     return (
@@ -27,7 +68,7 @@ export default function OrderTracking() {
     );
   }
 
-  const currentIndex = STATUS_FLOW.indexOf(order.status);
+  const currentIndex = Math.max(0, STATUS_FLOW.indexOf(order.status));
 
   return (
     <main className="tracking-page">
