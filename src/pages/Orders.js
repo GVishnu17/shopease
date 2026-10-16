@@ -20,15 +20,6 @@ function money(value) {
   return `$${Number(value || 0).toFixed(2)}`;
 }
 
-function existsLocally(orderId) {
-  try {
-    const saved = JSON.parse(localStorage.getItem('shopease_orders') || '[]');
-    return saved.some((order) => order.id === orderId);
-  } catch {
-    return false;
-  }
-}
-
 export default function Orders() {
   const { user } = useAuth();
   const uid = user ? user.uid : null;
@@ -117,9 +108,7 @@ export default function Orders() {
                   <div style={styles.line}><span>Discount</span><span>-{money(order.discount)}</span></div>
                   <div style={{ ...styles.line, fontWeight: '700' }}><span>Total</span><span>{money(order.total)}</span></div>
                   <p style={styles.address}><b>Delivery to:</b> {order.customer}, {order.address}</p>
-                  {existsLocally(order.id) && (
-                    <Link to={`/orders/${order.id}`} style={styles.shopLink}>Track this order</Link>
-                  )}
+                  <Link to={`/orders/${order.id}`} style={styles.shopLink}>Track this order</Link>
                 </div>
               )}
             </div>
