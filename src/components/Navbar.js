@@ -45,6 +45,7 @@ export default function Navbar() {
             💖
             {wishlistCount > 0 && <span className="navbar__cart-badge">{wishlistCount}</span>}
           </Link>
+          <Link to="/orders" title="My Orders" style={styles.icon}>📦</Link>
           <Link to="/contact" title="Contact Us" style={styles.icon}>📞</Link>
           <Link to="/cart" title="Cart" style={{ ...styles.icon, position: 'relative' }}>
             🛒
