@@ -26,3 +26,14 @@ yarn-error.log*
 # editor
 .vscode/
 .idea/
+# firebase
+.firebase/
+firebase-debug.log*
+*.log
+
+# secrets (service account keys)
+serviceAccountKey.json
+*-firebase-adminsdk-*.json
+
+# vercel
+.vercel
