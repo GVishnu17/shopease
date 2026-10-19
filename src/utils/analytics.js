@@ -1,6 +1,15 @@
 // Turns raw order documents into the numbers the admin dashboard shows.
-// Orders are expected as: { id, userId, items, totals, status, createdAt }.
-// If your field names differ, change the small helpers at the top only.
+// Orders are read as saved by ShopEase checkout:
+// { id, userId, items: [{ id, name, price, quantity }], subtotal, shipping, tax, discount, total, status, createdAt }
+
+import productData from '../data/products.json';
+
+// Items in saved orders have no category, so look it up from the product list
+const productList = Array.isArray(productData) ? productData : productData.products || [];
+const categoryById = {};
+productList.forEach((p) => {
+  categoryById[p.id] = p.category;
+});
 
 const num = (v) => Number(v) || 0;
 
@@ -15,8 +24,9 @@ export function toDate(v) {
   return isNaN(d.getTime()) ? null : d;
 }
 
+// Totals are saved directly on the order (or inside a "totals" group)
 export function orderTotal(o) {
-  const t = o.totals || {};
+  const t = o.totals || o;
   if (t.total != null) return num(t.total);
   return num(t.subtotal) + num(t.shipping) + num(t.tax) - num(t.discount);
 }
@@ -82,22 +92,22 @@ export function buildAnalytics(orders, days) {
   }
 
   // Products and categories
-  const products = {};
+  const productTotals = {};
   const categories = {};
   valid.forEach((o) => {
     (o.items || []).forEach((i) => {
       const name = itemName(i);
       const qty = itemQty(i);
       const lineRevenue = itemPrice(i) * qty;
-      products[name] = products[name] || { name, units: 0, revenue: 0 };
-      products[name].units += qty;
-      products[name].revenue += lineRevenue;
-      const cat = i.category || 'Other';
+      productTotals[name] = productTotals[name] || { name, units: 0, revenue: 0 };
+      productTotals[name].units += qty;
+      productTotals[name].revenue += lineRevenue;
+      const cat = i.category || categoryById[i.id] || 'Other';
       categories[cat] = categories[cat] || { name: cat, revenue: 0 };
       categories[cat].revenue += lineRevenue;
     });
   });
-  const topProducts = Object.values(products)
+  const topProducts = Object.values(productTotals)
     .sort((a, b) => b.units - a.units)
     .slice(0, 5);
   const byCategory = Object.values(categories)
