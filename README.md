@@ -193,7 +193,8 @@ The app needs an internet connection. Offline use is not supported yet.
 | Oct 11, 2026 | Wishlist, advanced filtering, order tracking, coupon validation, new styles |
 | Jun 22, 2026 | Payment window, login page, footer, contact page, ratings, logo and announcement bar |
 | Jun 21, 2026 | First version: React app setup |
-
+# 🛒 ShopEase
+![CI](https://github.com/GVishnu17/shopease/actions/workflows/ci.yml/badge.svg)
 ## Author
 
 Built by [GVishnu17](https://github.com/GVishnu17).
