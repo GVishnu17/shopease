@@ -1,12 +1,14 @@
 # 🛒 ShopEase
 
+![CI](https://github.com/GVishnu17/shopease/actions/workflows/ci.yml/badge.svg)
+
 An online shop built with React. Customers can register, browse products, save favourites, fill a cart, check out and track an order. Their account, cart and wishlist follow them to any device, and the app installs on a phone like a normal app.
 
 **Live demo:** [shopease-blush.vercel.app](https://shopease-blush.vercel.app)
 
 ## What's new
 
-Latest update (October 2026):
+Latest updates (October 2026):
 
 - **Real accounts.** Register, log in and reset a forgotten password with Firebase Authentication. The same login works on every device.
 - **Cart and wishlist saved online.** Both are stored in Cloud Firestore under the user's account, so they appear on any device after login.
@@ -14,6 +16,9 @@ Latest update (October 2026):
 - **Protected pages.** Visitors must log in to see the shop, and a loading screen shows while the login status is checked.
 - **Installable app.** A web app manifest, a service worker and the ShopEase icon let people install it from the browser.
 - **Better browser tab.** A proper page title, description and icon.
+- **Profile page.** Users save their name, phone and address, and checkout fills them in.
+- **Orders saved to the account.** A My Orders page lists past orders, and order tracking works on any device for new orders.
+- **Automated tests.** Jest unit tests for the cart and the price and coupon rules, run by GitHub Actions on every commit.
 - **Build fixes.** Missing hook dependencies were fixed so the project builds cleanly on Vercel.
 
 See the [full change log](#change-log) below.
@@ -39,6 +44,8 @@ See the [full change log](#change-log) below.
 - Forgot password link that sends a reset email
 - Friendly error messages, such as "Incorrect email or password"
 - Wishlist and cart saved to the user's account and loaded on any device
+- Profile page with a saved delivery address
+- My Orders page with order history saved to the account
 - Log out button in the top bar
 
 **App**
@@ -54,6 +61,8 @@ See the [full change log](#change-log) below.
 | Cart | `/cart` | Yes |
 | Checkout | `/checkout` | Yes |
 | Wishlist | `/wishlist` | Yes |
+| My profile | `/profile` | Yes |
+| My orders | `/orders` | Yes |
 | Order tracking | `/orders/:orderId` | Yes |
 | Contact | `/contact` | Yes |
 | Log in | `/login` | No |
@@ -85,6 +94,8 @@ Data in Firestore is stored per user:
 ```
 users/{userId}/data/cart       { items: [ ... ] }
 users/{userId}/data/wishlist   { items: [ ... ] }
+users/{userId}/data/profile    { phone, address, city, state, pin }
+users/{userId}/orders/{orderId}   { items, totals, status, createdAt }
 ```
 
 ## Tech stack
@@ -95,6 +106,7 @@ users/{userId}/data/wishlist   { items: [ ... ] }
 | Navigation | React Router 6 |
 | State | Context API and `useReducer` |
 | Accounts and data | Firebase Authentication, Cloud Firestore |
+| Testing | Jest and GitHub Actions |
 | Hosting | Vercel (deployed from GitHub) |
 | App install | Web app manifest and a service worker |
 
@@ -106,10 +118,15 @@ src/
   components/      Navbar, Footer, Filters, ProductCard, CartItem, PaymentModal, AnnouncementBar
   context/         AuthContext, CartContext, WishlistContext
   data/            products.json
-  pages/           Home, ProductDetail, Cart, Checkout, Wishlist, OrderTracking, Login, Register, Contact
+  utils/           pricing.js (price and coupon rules)
+  pages/           Home, ProductDetail, Cart, Checkout, Wishlist, Orders, OrderTracking, Profile, Login, Register, Contact
   firebase.js      Firebase setup
   App.js           routes and protected pages
 ```
+
+## Tests
+
+The cart logic and the price and coupon rules have unit tests. Run them with `npm test`. GitHub Actions runs the tests and a production build on every commit, and the badge at the top shows whether they pass.
 
 ## Run it on your computer
 
@@ -173,14 +190,16 @@ The app needs an internet connection. Offline use is not supported yet.
 ## Known limits
 
 - The payment window is a demo and no money moves.
-- Orders are saved in the browser of the device that placed them, not in the account.
+- Orders placed before the My Orders update are saved only on the device that placed them. New orders are saved in the account.
+- Order status stays "Confirmed" because there is no admin page yet.
 - A cart changed on one device shows on another after that device loads or logs in again, not instantly.
 - Product data comes from a local file (`src/data/products.json`), not a database.
 
 ## Ideas for next steps
 
-- Save orders to the user's account
-- Real online payments
+- An admin page to update order status
+- Real online payments in test mode
+- Accessibility and speed improvements
 - Live cart updates between open devices
 - Move the product list to a database
 
@@ -188,13 +207,14 @@ The app needs an internet connection. Offline use is not supported yet.
 
 | Date | Change |
 |---|---|
+| Oct 19, 2026 | Jest unit tests and a GitHub Actions check that runs the tests and build on every commit |
+| Oct 13 to 16, 2026 | Profile page with a saved address, orders saved to the account, My Orders page, order tracking on any device |
 | Oct 13, 2026 | Firebase Authentication, forgot password, cart and wishlist saved to Firestore |
 | Oct 12, 2026 | Login and registration pages, protected routes, page title, icon, installable app |
 | Oct 11, 2026 | Wishlist, advanced filtering, order tracking, coupon validation, new styles |
 | Jun 22, 2026 | Payment window, login page, footer, contact page, ratings, logo and announcement bar |
 | Jun 21, 2026 | First version: React app setup |
-# 🛒 ShopEase
-![CI](https://github.com/GVishnu17/shopease/actions/workflows/ci.yml/badge.svg)
+
 ## Author
 
 Built by [GVishnu17](https://github.com/GVishnu17).
