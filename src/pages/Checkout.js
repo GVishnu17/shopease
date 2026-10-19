@@ -1,14 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { calculateTotals, isValidCoupon, normalizeCoupon } from '../utils/pricing';
 import PaymentModal from '../components/PaymentModal';
-
-const FREE_SHIPPING_MIN = 50;
-const SHIPPING_FEE = 5;
-const TAX_RATE = 0.08;
 
 export default function Checkout() {
   const { cart, totalPrice, clearCart, itemCount } = useCart();
@@ -56,24 +53,10 @@ export default function Checkout() {
   };
 
   const subtotal = totalPrice;
-  const shipping = subtotal >= FREE_SHIPPING_MIN ? 0 : SHIPPING_FEE;
-  const tax = subtotal * TAX_RATE;
-
-  const discount = useMemo(() => {
-    const normalized = coupon.trim().toUpperCase();
-
-    if (!normalized) return 0;
-    if (normalized === 'SAVE10') return subtotal * 0.1;
-    if (normalized === 'WELCOME5') return subtotal * 0.05;
-    if (normalized === 'FREESHIP') return shipping;
-    return 0;
-  }, [coupon, shipping, subtotal]);
-
-  const finalTotal = Math.max(0, subtotal + shipping + tax - discount);
+  const { shipping, tax, discount, total: finalTotal } = calculateTotals(subtotal, coupon);
 
   const applyCoupon = () => {
-    const normalized = coupon.trim().toUpperCase();
-    const validCoupons = ['SAVE10', 'WELCOME5', 'FREESHIP'];
+    const normalized = normalizeCoupon(coupon);
 
     if (!normalized) {
       setCouponError('Please enter a coupon code.');
@@ -81,7 +64,7 @@ export default function Checkout() {
       return;
     }
 
-    if (!validCoupons.includes(normalized)) {
+    if (!isValidCoupon(normalized)) {
       setCouponError('Invalid coupon code. Try SAVE10, WELCOME5, or FREESHIP.');
       setCouponApplied(false);
       return;
