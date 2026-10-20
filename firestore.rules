@@ -1,0 +1,97 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function orderTotal(order) {
+      return order.get('total', order.get('totals', {}).get('total', 0));
+    }
+
+    function protectedOrderStatuses() {
+      return ['cancelled', 'refunded', 'partially_refunded'];
+    }
+
+    function shippedStatuses() {
+      return [
+        'Shipped', 'shipped',
+        'Out for Delivery', 'out for delivery',
+        'Delivered', 'delivered'
+      ];
+    }
+
+    match /users/{userId}/{document=**} {
+      allow read, write: if isOwner(userId) && !document.matches('orders/.*');
+    }
+
+    match /users/{userId}/orders/{orderId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) &&
+        !(request.resource.data.get('status', '') in protectedOrderStatuses()) &&
+        !request.resource.data.keys().hasAny([
+          'refundAmount', 'refundReason', 'refundedAt', 'cancelledAt', 'processedBy'
+        ]);
+      allow update: if (
+          isOwner(userId) &&
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+            'refundAmount', 'refundReason', 'refundedAt', 'cancelledAt', 'processedBy'
+          ]) &&
+          (
+            !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status']) ||
+            (
+              !(request.resource.data.get('status', '') in protectedOrderStatuses()) &&
+              !(resource.data.get('status', '') in protectedOrderStatuses())
+            )
+          )
+        ) || (
+          isAdmin() &&
+          (
+            (
+              request.resource.data.get('status', '') == 'cancelled' &&
+              resource.data.get('status', '') != 'cancelled' &&
+              !(resource.data.get('status', '') in shippedStatuses()) &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'status', 'cancelledAt', 'processedBy'
+              ]) &&
+              request.resource.data.cancelledAt is timestamp &&
+              request.resource.data.processedBy == request.auth.uid
+            ) ||
+            (
+              request.resource.data.get('status', '') in ['refunded', 'partially_refunded'] &&
+              resource.data.get('status', '') != 'cancelled' &&
+              resource.data.get('status', '') != 'refunded' &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'status', 'refundAmount', 'refundReason', 'refundedAt', 'processedBy'
+              ]) &&
+              request.resource.data.refundAmount is number &&
+              request.resource.data.refundAmount > resource.data.get('refundAmount', 0) &&
+              request.resource.data.refundAmount <= orderTotal(resource.data) &&
+              request.resource.data.status ==
+                (request.resource.data.refundAmount >= orderTotal(resource.data)
+                  ? 'refunded'
+                  : 'partially_refunded') &&
+              request.resource.data.refundReason is string &&
+              request.resource.data.refundReason.size() > 0 &&
+              request.resource.data.refundedAt is timestamp &&
+              request.resource.data.processedBy == request.auth.uid
+            )
+          )
+        );
+      allow delete: if isOwner(userId);
+    }
+
+    match /{path=**}/orders/{orderId} {
+      allow read: if isAdmin();
+    }
+
+    match /admins/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}

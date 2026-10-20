@@ -107,6 +107,12 @@ export default function Orders() {
                   <div style={styles.line}><span>Tax</span><span>{money(order.tax)}</span></div>
                   <div style={styles.line}><span>Discount</span><span>-{money(order.discount)}</span></div>
                   <div style={{ ...styles.line, fontWeight: '700' }}><span>Total</span><span>{money(order.total)}</span></div>
+                  {Number(order.refundAmount || 0) > 0 && (
+                    <>
+                      <div style={styles.line}><span>Refunded</span><span>{money(order.refundAmount)}</span></div>
+                      {order.refundReason && <p style={styles.address}><b>Refund reason:</b> {order.refundReason}</p>}
+                    </>
+                  )}
                   <p style={styles.address}><b>Delivery to:</b> {order.customer}, {order.address}</p>
                   <Link to={`/orders/${order.id}`} style={styles.shopLink}>Track this order</Link>
                 </div>
