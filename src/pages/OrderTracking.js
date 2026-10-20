@@ -68,7 +68,8 @@ export default function OrderTracking() {
     );
   }
 
-  const currentIndex = Math.max(0, STATUS_FLOW.indexOf(order.status));
+  const currentIndex = STATUS_FLOW.indexOf(order.status);
+  const isTrackingStatus = currentIndex >= 0;
 
   return (
     <main className="tracking-page">
@@ -79,14 +80,25 @@ export default function OrderTracking() {
           Placed on {new Date(order.createdAt).toLocaleDateString()} • {order.customer}
         </p>
 
-        <div className="tracking-progress">
-          {STATUS_FLOW.map((status, index) => (
-            <div key={status} className={`tracking-step ${index <= currentIndex ? 'active' : ''}`}>
-              <span className="tracking-step__dot" />
-              <span>{status}</span>
-            </div>
-          ))}
-        </div>
+        {isTrackingStatus ? (
+          <div className="tracking-progress">
+            {STATUS_FLOW.map((status, index) => (
+              <div key={status} className={`tracking-step ${index <= currentIndex ? 'active' : ''}`}>
+                <span className="tracking-step__dot" />
+                <span>{status}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="tracking-card__meta"><strong>Status:</strong> {order.status || 'Confirmed'}</p>
+        )}
+
+        {Number(order.refundAmount || 0) > 0 && (
+          <p className="tracking-card__meta">
+            Refund recorded: ${Number(order.refundAmount).toFixed(2)}
+            {order.refundReason ? ` · ${order.refundReason}` : ''}
+          </p>
+        )}
 
         <div className="tracking-summary">
           <div>

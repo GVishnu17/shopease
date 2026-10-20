@@ -39,6 +39,7 @@ const itemPrice = (i) => num(i.price);
 const dayKey = (d) => d.toLocaleDateString('en-CA');
 
 const isCancelled = (o) => String(o.status || '').toLowerCase() === 'cancelled';
+const orderRevenue = (o) => Math.max(0, orderTotal(o) - num(o.refundAmount));
 
 export function buildAnalytics(orders, days) {
   const now = new Date();
@@ -51,7 +52,7 @@ export function buildAnalytics(orders, days) {
   // Cancelled orders do not count as revenue
   const valid = inRange.filter((o) => !isCancelled(o));
 
-  const revenue = valid.reduce((s, o) => s + orderTotal(o), 0);
+  const revenue = valid.reduce((s, o) => s + orderRevenue(o), 0);
   const customers = new Set(valid.map((o) => o.userId).filter(Boolean));
   const repeatCustomers = [...customers].filter(
     (u) => valid.filter((o) => o.userId === u).length > 1
@@ -63,7 +64,7 @@ export function buildAnalytics(orders, days) {
     avgOrderValue: valid.length ? revenue / valid.length : 0,
     customers: customers.size,
     repeatRate: customers.size ? (repeatCustomers / customers.size) * 100 : 0,
-    cancelled: inRange.length - valid.length,
+    cancelled: inRange.filter(isCancelled).length,
   };
 
   // Daily series with empty days filled in as zero
@@ -71,7 +72,7 @@ export function buildAnalytics(orders, days) {
   valid.forEach((o) => {
     const k = dayKey(o._date);
     byDay[k] = byDay[k] || { revenue: 0, orders: 0 };
-    byDay[k].revenue += orderTotal(o);
+    byDay[k].revenue += orderRevenue(o);
     byDay[k].orders += 1;
   });
   let first = start;
@@ -98,7 +99,8 @@ export function buildAnalytics(orders, days) {
     (o.items || []).forEach((i) => {
       const name = itemName(i);
       const qty = itemQty(i);
-      const lineRevenue = itemPrice(i) * qty;
+      const refundRatio = orderTotal(o) > 0 ? orderRevenue(o) / orderTotal(o) : 1;
+      const lineRevenue = itemPrice(i) * qty * refundRatio;
       productTotals[name] = productTotals[name] || { name, units: 0, revenue: 0 };
       productTotals[name].units += qty;
       productTotals[name].revenue += lineRevenue;

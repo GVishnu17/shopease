@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { collectionGroup, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collectionGroup, getDocs, doc, getDoc, Timestamp, updateDoc } from 'firebase/firestore';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -48,6 +48,13 @@ const css = `
 .ad-table th, .ad-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e3e8ed; white-space: nowrap; }
 .ad-table td.r, .ad-table th.r { text-align: right; }
 .ad-msg { max-width: 520px; margin: 80px auto; text-align: center; padding: 0 16px; }
+.ad-actions { display: flex; gap: 6px; }
+.ad-modal-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 16px; background: rgba(15, 23, 42, 0.55); }
+.ad-modal { width: min(100%, 420px); background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2); }
+.ad-modal h2 { margin-top: 0; }
+.ad-modal label { display: block; margin: 12px 0 4px; font-size: 0.9rem; }
+.ad-modal input, .ad-modal textarea { box-sizing: border-box; width: 100%; padding: 8px; border: 1px solid #cfd6dd; border-radius: 6px; font: inherit; }
+.ad-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 `;
 
 export default function AdminDashboard() {
@@ -57,6 +64,10 @@ export default function AdminDashboard() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [days, setDays] = useState(30);
+  const [action, setAction] = useState(null);
+  const [refundAmount, setRefundAmount] = useState('');
+  const [refundReason, setRefundReason] = useState('');
+  const [savingAction, setSavingAction] = useState(false);
 
   // An admin is a user who has a document at admins/{uid}
   useEffect(() => {
@@ -106,6 +117,66 @@ export default function AdminDashboard() {
     URL.revokeObjectURL(url);
   };
 
+  const openAction = (type, order) => {
+    setError('');
+    setAction({ type, order });
+    setRefundAmount('');
+    setRefundReason('');
+  };
+
+  const submitAction = async () => {
+    if (!action || savingAction) return;
+    const { type, order } = action;
+    const orderRef = doc(db, 'users', order.userId, 'orders', order.id);
+    let changes;
+
+    if (type === 'cancel') {
+      changes = {
+        status: 'cancelled',
+        cancelledAt: Timestamp.now(),
+        processedBy: user.uid,
+      };
+    } else {
+      const requestedAmount = Number(refundAmount);
+      const totalAmount = orderTotal(order);
+      const currentRefund = Number(order.refundAmount || 0);
+      const remainingAmount = Math.max(0, totalAmount - currentRefund);
+      const maxInputAmount = Math.ceil((remainingAmount - Number.EPSILON) * 100) / 100;
+      if (!Number.isFinite(requestedAmount) || requestedAmount <= 0 || requestedAmount > maxInputAmount) {
+        setError('Enter a refund amount greater than zero and no more than the remaining order total.');
+        return;
+      }
+      if (!refundReason.trim()) {
+        setError('Enter a reason for the refund.');
+        return;
+      }
+      const newRefundTotal = Math.min(totalAmount, currentRefund + requestedAmount);
+      changes = {
+        status: newRefundTotal >= totalAmount ? 'refunded' : 'partially_refunded',
+        refundAmount: newRefundTotal,
+        refundReason: refundReason.trim(),
+        refundedAt: Timestamp.now(),
+        processedBy: user.uid,
+      };
+    }
+
+    setSavingAction(true);
+    setError('');
+    try {
+      await updateDoc(orderRef, changes);
+      setOrders((current) =>
+        current.map((item) =>
+          item.userId === order.userId && item.id === order.id ? { ...item, ...changes } : item
+        )
+      );
+      setAction(null);
+    } catch (e) {
+      setError(`Could not ${type === 'cancel' ? 'cancel' : 'record a refund for'} this order. Check admin Firestore rules and try again.`);
+    } finally {
+      setSavingAction(false);
+    }
+  };
+
   if (access === 'checking') return <div className="ad-msg">Checking access…</div>;
   if (access === 'denied')
     return (
@@ -116,7 +187,8 @@ export default function AdminDashboard() {
     );
 
   const { kpis, daily, topProducts, byCategory, byStatus, recent } = data;
-  const hasOrders = kpis.orders > 0;
+  const hasOrders = recent.length > 0;
+  const refundRemaining = action ? Math.max(0, orderTotal(action.order) - Number(action.order.refundAmount || 0)) : 0;
 
   return (
     <div className="ad">
@@ -223,6 +295,7 @@ export default function AdminDashboard() {
                       <th>Date</th>
                       <th>Status</th>
                       <th className="r">Total</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -232,6 +305,16 @@ export default function AdminDashboard() {
                         <td>{toDate(o.createdAt)?.toLocaleDateString()}</td>
                         <td>{o.status || 'Confirmed'}</td>
                         <td className="r">{money(orderTotal(o))}</td>
+                        <td>
+                          <div className="ad-actions">
+                            {!['cancelled', 'shipped', 'out for delivery', 'delivered'].includes(String(o.status || '').toLowerCase()) && (
+                              <button className="ad-btn" onClick={() => openAction('cancel', o)}>Cancel</button>
+                            )}
+                            {!['cancelled', 'refunded'].includes(String(o.status || '').toLowerCase()) && (
+                              <button className="ad-btn" onClick={() => openAction('refund', o)}>Refund</button>
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -240,6 +323,45 @@ export default function AdminDashboard() {
             </div>
           </div>
         </>
+      )}
+      {action && (
+        <div className="ad-modal-backdrop" role="presentation">
+          <section className="ad-modal" role="dialog" aria-modal="true" aria-labelledby="ad-action-title">
+            <h2 id="ad-action-title">{action.type === 'cancel' ? 'Confirm order cancellation' : 'Record a refund'}</h2>
+            {error && <p role="alert">{error}</p>}
+            <p>Order {action.order.id}</p>
+            {action.type === 'cancel' ? (
+              <p>This will mark the order as cancelled. No money will be moved.</p>
+            ) : (
+              <>
+                <p>Remaining refundable amount: {money(refundRemaining)}. Enter the additional amount to record.</p>
+                <label htmlFor="ad-refund-amount">Refund amount</label>
+                <input
+                  id="ad-refund-amount"
+                  type="number"
+                  min="0.01"
+                  max={Math.ceil((refundRemaining - Number.EPSILON) * 100) / 100}
+                  step="0.01"
+                  value={refundAmount}
+                  onChange={(event) => setRefundAmount(event.target.value)}
+                />
+                <label htmlFor="ad-refund-reason">Reason</label>
+                <textarea
+                  id="ad-refund-reason"
+                  rows="3"
+                  value={refundReason}
+                  onChange={(event) => setRefundReason(event.target.value)}
+                />
+              </>
+            )}
+            <div className="ad-modal-actions">
+              <button className="ad-btn" onClick={() => setAction(null)} disabled={savingAction}>Close</button>
+              <button className="ad-btn on" onClick={submitAction} disabled={savingAction || (action.type === 'refund' && refundRemaining <= 0)}>
+                {savingAction ? 'Saving…' : action.type === 'cancel' ? 'Confirm cancellation' : 'Confirm refund'}
+              </button>
+            </div>
+          </section>
+        </div>
       )}
     </div>
   );
