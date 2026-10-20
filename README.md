@@ -19,6 +19,8 @@ Latest updates (October 2026):
 - **Profile page.** Users save their name, phone and address, and checkout fills them in.
 - **Orders saved to the account.** A My Orders page lists past orders, and order tracking works on any device for new orders.
 - **Automated tests.** Jest unit tests for the cart and the price and coupon rules, run by GitHub Actions on every commit.
+- **Admin sales dashboard.** Revenue, orders, average order value, customers and repeat customers, with charts, date filters and a CSV download.
+- **Refund process.** A refund process was added for orders.
 - **Build fixes.** Missing hook dependencies were fixed so the project builds cleanly on Vercel.
 
 See the [full change log](#change-log) below.
@@ -38,6 +40,7 @@ See the [full change log](#change-log) below.
 - Coupon codes with clear messages for valid and invalid codes
 - Payment window (demo only, no real payment is taken)
 - Order confirmation and an order tracking page
+- Refund process for orders
 
 **Accounts**
 - Register and log in with email and password
@@ -47,6 +50,11 @@ See the [full change log](#change-log) below.
 - Profile page with a saved delivery address
 - My Orders page with order history saved to the account
 - Log out button in the top bar
+
+**Admin dashboard**
+- Sales summary: revenue, number of orders, average order value, customers, repeat customers and cancelled orders
+- Charts: revenue per day, top products by units sold, revenue by category and orders by status
+- Date filters (7 days, 30 days, 90 days, all time), a refresh button and a CSV download
 
 **App**
 - Installable on Android, iPhone and computers (Progressive Web App)
@@ -63,6 +71,7 @@ See the [full change log](#change-log) below.
 | Wishlist | `/wishlist` | Yes |
 | My profile | `/profile` | Yes |
 | My orders | `/orders` | Yes |
+| Admin sales dashboard | `/admin` | Yes |
 | Order tracking | `/orders/:orderId` | Yes |
 | Contact | `/contact` | Yes |
 | Log in | `/login` | No |
@@ -119,7 +128,7 @@ src/
   context/         AuthContext, CartContext, WishlistContext
   data/            products.json
   utils/           pricing.js (price and coupon rules)
-  pages/           Home, ProductDetail, Cart, Checkout, Wishlist, Orders, OrderTracking, Profile, Login, Register, Contact
+  pages/           Home, ProductDetail, Cart, Checkout, Wishlist, Orders, OrderTracking, Profile, Admin, Login, Register, Contact
   firebase.js      Firebase setup
   App.js           routes and protected pages
 ```
@@ -191,13 +200,12 @@ The app needs an internet connection. Offline use is not supported yet.
 
 - The payment window is a demo and no money moves.
 - Orders placed before the My Orders update are saved only on the device that placed them. New orders are saved in the account.
-- Order status stays "Confirmed" because there is no admin page yet.
 - A cart changed on one device shows on another after that device loads or logs in again, not instantly.
 - Product data comes from a local file (`src/data/products.json`), not a database.
 
 ## Ideas for next steps
 
-- An admin page to update order status
+- More admin tools, such as managing products and stock
 - Real online payments in test mode
 - Accessibility and speed improvements
 - Live cart updates between open devices
@@ -207,6 +215,7 @@ The app needs an internet connection. Offline use is not supported yet.
 
 | Date | Change |
 |---|---|
+| Oct 19, 2026 | Admin sales dashboard with charts, date filters and CSV export, and a refund process |
 | Oct 19, 2026 | Jest unit tests and a GitHub Actions check that runs the tests and build on every commit |
 | Oct 13 to 16, 2026 | Profile page with a saved address, orders saved to the account, My Orders page, order tracking on any device |
 | Oct 13, 2026 | Firebase Authentication, forgot password, cart and wishlist saved to Firestore |
